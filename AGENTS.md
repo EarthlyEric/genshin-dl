@@ -2,8 +2,8 @@
 
 ## Repository Shape
 
-- Single Rust 2021 binary crate; `src/main.rs` routes CLI commands through `src/cmd.rs` and the TUI through `src/tui/app.rs`; `src/logging.rs` forwards tracing logs into the TUI event stream.
-- `src/download.rs` is the shared Sophon installer/updater engine; `src/cmd.rs` and `src/tui/app.rs` render its `download::Event` progress stream.
+- Single Rust 2021 binary crate; `src/main.rs` routes CLI commands through `src/cmd.rs` and the TUI through `src/tui/`; `src/logging.rs` forwards tracing logs into the TUI event stream.
+- `src/download.rs` is the shared Sophon installer/updater engine; `src/cmd.rs` and the TUI screens render its `download::Event` progress stream.
 - API access is centralized in `src/api.rs`; edition mapping and voice-package selection/detection live in `src/edition.rs` and `src/voice.rs`.
 - `anime-launcher-sdk` is a git dependency pinned to tag `1.35.10`; keep `Cargo.lock` consistent with intentional dependency changes.
 
@@ -14,8 +14,9 @@
 - Build the release artifact with `cargo build --release --locked`.
 - Run one focused test with `cargo test --locked <test-name-or-filter>`.
 
-## TUI (`src/tui/app.rs`)
+## TUI (`src/tui/`)
 
+- `src/tui/app.rs` owns the app state machine and key handling; per-screen rendering lives in `menu.rs`, `params.rs`, `progress.rs`, `result.rs`, shared helpers in `ui.rs`, and the voice picker in `voice_picker.rs`.
 - Screens are only Menu, Params, Progress, Result — there are no separate picker screens. The file explorer and voice picker render inline in the Params middle zone; a picker is "open" when `dest_picker` / `voice_picker` is `Some`.
 - Params navigation: ↑/↓/Tab cycle the four fields (dest, threads, voices, Start). `Enter` on the dest field opens the embedded `tui-file-explorer` picker, on voices opens the voice picker, and only on Start launches the worker (Enter elsewhere never starts it). `Esc` closes an open picker first, a second `Esc` returns to Menu.
 - Explorer `space`/`n`/`r` keys are deliberately blocked (inline picker must not mutate the filesystem); `c` picks the current directory and closes the picker.
