@@ -74,5 +74,5 @@ jobs:
 
             ### Downloads
 
-            - [Download genshin-dl (${{ github.ref_name }}, Linux x64)](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/genshin-dl-${{ github.ref_name }}-linux-x64.zip)
+            - [genshin-dl (${{ github.ref_name }}, Linux x64)](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/genshin-dl-${{ github.ref_name }}-linux-x64.zip)
             - `genshin-dl-${{ github.ref_name }}-linux-x64.zip`: `${{ steps.checksums.outputs.linux }}`
