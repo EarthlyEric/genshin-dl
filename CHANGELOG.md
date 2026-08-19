@@ -32,5 +32,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Disk free space check (`--no-free-space-check` to skip)
 - Version display via `--version` and in the TUI title bar
 
-[0.2.0]: https://github.com/EarthlyEric/genshin-dl/releases/tag/0.2.0
+[0.2.0]: https://github.com/EarthlyEric/genshin-dl/compare/0.2.0...0.1.0
 [0.1.0]: https://github.com/EarthlyEric/genshin-dl/releases/tag/0.1.0
