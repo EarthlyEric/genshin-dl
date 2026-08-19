@@ -12,8 +12,9 @@ features = ["all", "genshin"]
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
 
-ratatui = "0.29"
-crossterm = "0.28"
+ratatui = "0.30"
+crossterm = "0.29"
+tui-file-explorer = { version = "2.0.0", default-features = false }
 
 indicatif = "0.17"
 

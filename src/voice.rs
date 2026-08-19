@@ -18,12 +18,17 @@ pub fn voice_fields<'a>(fields: impl Iterator<Item = &'a str>) -> Vec<String> {
 /// - empty request + `default_all` => all available voices
 /// - empty request + !`default_all` => no voices
 /// - `all` => all available voices
+/// - `none` => no voices
 /// - otherwise validate every requested field against the available list
 pub fn resolve(
     requested: &[String],
     available: &[String],
     default_all: bool,
 ) -> anyhow::Result<Vec<String>> {
+    if requested.iter().any(|r| r == "none") {
+        return Ok(vec![]);
+    }
+
     if requested.is_empty() {
         return Ok(if default_all {
             available.to_vec()
@@ -87,6 +92,17 @@ mod tests {
         let available = vec!["en-us".to_string(), "ja-jp".to_string()];
         assert_eq!(resolve(&[], &available, true).unwrap(), available);
         assert!(resolve(&[], &available, false).unwrap().is_empty());
+    }
+
+    #[test]
+    fn resolve_none() {
+        let available = vec!["en-us".to_string(), "ja-jp".to_string()];
+        assert!(resolve(&["none".to_string()], &available, true)
+            .unwrap()
+            .is_empty());
+        assert!(resolve(&["none".to_string()], &available, false)
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
