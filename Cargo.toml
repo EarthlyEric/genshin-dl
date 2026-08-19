@@ -1,0 +1,24 @@
+[package]
+name = "genshin-dl"
+version = "0.1.0"
+edition = "2021"
+description = "CLI & TUI downloader for Genshin Impact built on anime-launcher-sdk"
+
+[dependencies.anime-launcher-sdk]
+git = "https://github.com/an-anime-team/anime-launcher-sdk"
+tag = "1.35.10"
+features = ["all", "genshin"]
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+
+ratatui = "0.29"
+crossterm = "0.28"
+
+indicatif = "0.17"
+
+anyhow = "1.0"
+thiserror = "2.0"
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
