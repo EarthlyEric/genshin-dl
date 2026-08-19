@@ -368,12 +368,10 @@ fn install_download(
     let failed = Arc::new(AtomicBool::new(false));
     let failed_clone = Arc::clone(&failed);
 
-    send(
-        tx,
-        Event::Phase(format!("Downloading {}", info.matching_field)),
-    );
+    let phase = format!("Downloading {}", info.matching_field);
+    send(tx, Event::Phase(phase.clone()));
     installer.install(game_dir, threads, move |u| {
-        send_installer_update(tx, u, &failed_clone);
+        send_installer_update(tx, u, &failed_clone, &phase);
     })?;
 
     if failed.load(Ordering::Acquire) {
@@ -398,12 +396,10 @@ fn pre_download_manifest(
     let failed = Arc::new(AtomicBool::new(false));
     let failed_clone = Arc::clone(&failed);
 
-    send(
-        tx,
-        Event::Phase(format!("Pre-downloading {}", info.matching_field)),
-    );
+    let phase = format!("Pre-downloading {}", info.matching_field);
+    send(tx, Event::Phase(phase.clone()));
     installer.pre_download(threads, move |u| {
-        send_installer_update(tx, u, &failed_clone)
+        send_installer_update(tx, u, &failed_clone, &phase)
     })?;
 
     if failed.load(Ordering::Acquire) {
@@ -433,12 +429,10 @@ fn repair_manifest(
     let failed = Arc::new(AtomicBool::new(false));
     let failed_clone = Arc::clone(&failed);
 
-    send(
-        tx,
-        Event::Phase(format!("Repairing {}", info.matching_field)),
-    );
+    let phase = format!("Repairing {}", info.matching_field);
+    send(tx, Event::Phase(phase.clone()));
     repairer.install(game_dir, threads, move |u| {
-        send_installer_update(tx, u, &failed_clone);
+        send_installer_update(tx, u, &failed_clone, &phase);
     })?;
 
     let _ = std::fs::remove_dir_all(repairer.downloading_temp());
@@ -542,18 +536,26 @@ fn update_voices(
     Ok(())
 }
 
-fn send_installer_update(tx: &Sender<Event>, update: InstallerUpdate, failed: &Arc<AtomicBool>) {
+fn send_installer_update(
+    tx: &Sender<Event>,
+    update: InstallerUpdate,
+    failed: &Arc<AtomicBool>,
+    phase: &str,
+) {
     match update {
         InstallerUpdate::CheckingFreeSpace(_) => {
             send(tx, Event::Phase("Checking free space".into()))
         }
-        InstallerUpdate::CheckingFiles { total_files } => send(
-            tx,
-            Event::ProgressFiles {
-                downloaded: 0,
-                total: total_files,
-            },
-        ),
+        InstallerUpdate::CheckingFiles { total_files } => {
+            send(tx, Event::Phase("Checking files".into()));
+            send(
+                tx,
+                Event::ProgressFiles {
+                    downloaded: 0,
+                    total: total_files,
+                },
+            );
+        }
         InstallerUpdate::CheckingFilesProgress { passed, total } => send(
             tx,
             Event::ProgressFiles {
@@ -566,6 +568,7 @@ fn send_installer_update(tx: &Sender<Event>, update: InstallerUpdate, failed: &A
             total_files,
             ..
         } => {
+            send(tx, Event::Phase(phase.to_owned()));
             send(
                 tx,
                 Event::ProgressBytes {
@@ -687,4 +690,57 @@ fn read_version(game_dir: &Path) -> anyhow::Result<Option<Version>> {
 fn write_version(game_dir: &Path, tag: &str) -> anyhow::Result<()> {
     std::fs::write(game_dir.join(".version"), tag)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn phases_from(update: InstallerUpdate, phase: &str) -> Vec<String> {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let failed = Arc::new(AtomicBool::new(false));
+        send_installer_update(&tx, update, &failed, phase);
+        drop(tx);
+        rx.try_iter()
+            .filter_map(|event| match event {
+                Event::Phase(phase) => Some(phase),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn checking_files_advances_phase() {
+        assert_eq!(
+            phases_from(
+                InstallerUpdate::CheckingFiles { total_files: 10 },
+                "Repairing game"
+            ),
+            vec!["Checking files".to_owned()]
+        );
+    }
+
+    #[test]
+    fn downloading_started_restores_action_phase() {
+        let phases = phases_from(
+            InstallerUpdate::DownloadingStarted {
+                location: PathBuf::from("."),
+                total_bytes: 100,
+                total_files: 2,
+            },
+            "Repairing game",
+        );
+        assert!(phases.contains(&"Repairing game".to_owned()));
+    }
+
+    #[test]
+    fn checking_free_space_reports_phase() {
+        assert_eq!(
+            phases_from(
+                InstallerUpdate::CheckingFreeSpace(PathBuf::from(".")),
+                "Repairing game"
+            ),
+            vec!["Checking free space".to_owned()]
+        );
+    }
 }
