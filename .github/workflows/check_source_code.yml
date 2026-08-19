@@ -3,8 +3,18 @@ name: Check source code
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - '*.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.github/**'
 
   pull_request:
+    paths-ignore:
+      - '*.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.github/**'
 
   workflow_dispatch:
 
