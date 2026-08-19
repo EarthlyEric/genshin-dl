@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-08-19
+
+### Added
+
+- Embedded file explorer for selecting the game directory (inline in the TUI params screen)
+- Voice pack picker with live selection (`none` / `all` / concrete locale codes)
+- Log panel streaming tracing output into the TUI, with per-screen rendering split into dedicated modules
+- Per-phase progress display and early state transition during file checks
+
+### Fixed
+
+- Download phase advancing during file check and download steps
+
 ## [0.1.0] - 2026-08-19
 
 ### Added
