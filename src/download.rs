@@ -327,8 +327,18 @@ pub fn repair(
         manifests.push(info.clone());
     }
 
+    let available = voice::voice_fields(
+        downloads
+            .manifests
+            .iter()
+            .map(|m| m.matching_field.as_str()),
+    );
     let installed = voice::detect_installed(&game_dir, edition);
-    let fields = voice::resolve(&voices, &installed, true)?;
+    let fields = if voices.is_empty() {
+        voice::resolve(&voices, &installed, true)?
+    } else {
+        voice::resolve(&voices, &available, false)?
+    };
     for field in fields {
         if let Some(info) = downloads.get_manifests_for(&field) {
             manifests.push(info.clone());
