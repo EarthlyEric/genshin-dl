@@ -73,13 +73,20 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
             ("q", "quit"),
         ]),
         Screen::Params => {
-            if app.dest_picker.is_some() || app.voice_picker.is_some() {
+            if app.dest_picker.is_some() {
                 hint_line(&[
                     ("Esc", "close"),
                     ("↑/↓", "move"),
                     ("Enter", "open"),
                     ("Backspace", "parent"),
                     ("c", "choose current destination"),
+                ])
+            } else if app.voice_picker.is_some() {
+                hint_line(&[
+                    ("↑/↓", "move"),
+                    ("Space", "toggle"),
+                    ("Enter", "next"),
+                    ("Esc", "back"),
                 ])
             } else {
                 hint_line(&[("↑/↓", "field"), ("Enter", "open options"), ("Esc", "back")])

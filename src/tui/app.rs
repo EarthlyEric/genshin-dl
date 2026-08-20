@@ -664,8 +664,6 @@ mod tests {
         assert_eq!(app.result_scroll, 0);
     }
 
-
-
     #[test]
     fn worker_dying_without_finished_moves_to_result() {
         let (tx, rx) = mpsc::channel();

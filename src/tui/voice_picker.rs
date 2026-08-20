@@ -1,10 +1,9 @@
-use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, List, ListItem, Padding, Paragraph};
 use ratatui::Frame;
 
-use super::ui::hint_line;
 use crate::voice;
 
 pub(super) const VOICE_OPTIONS: [(&str, &str); 6] = [
@@ -83,12 +82,7 @@ impl VoicePicker {
 }
 
 pub(super) fn render_voice_picker(frame: &mut Frame, area: Rect, picker: &VoicePicker) {
-    let chunks = Layout::vertical([
-        Constraint::Length(3),
-        Constraint::Min(1),
-        Constraint::Length(3),
-    ])
-    .split(area);
+    let chunks = Layout::vertical([Constraint::Length(3), Constraint::Min(1)]).split(area);
 
     let summary = if picker.selected[0] {
         "None".to_owned()
@@ -205,24 +199,4 @@ pub(super) fn render_voice_picker(frame: &mut Frame, area: Rect, picker: &VoiceP
             .border_style(Style::default().fg(Color::Cyan)),
     );
     frame.render_widget(list, chunks[1]);
-
-    let footer = Paragraph::new(Span::styled(
-        format!(" {selected_count}/{} selected ", VOICE_OPTIONS.len()),
-        Style::default().fg(Color::DarkGray),
-    ))
-    .alignment(Alignment::Right)
-    .block(
-        Block::default()
-            .title(hint_line(&[
-                ("↑/↓", "move"),
-                ("Space", "toggle"),
-                ("Enter", "next"),
-                ("Tab", "field"),
-                ("Esc", "back"),
-            ]))
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(Color::DarkGray)),
-    );
-    frame.render_widget(footer, chunks[2]);
 }
