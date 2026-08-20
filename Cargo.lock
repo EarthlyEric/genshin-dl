@@ -1267,7 +1267,6 @@ dependencies = [
  "crossterm",
  "indicatif",
  "ratatui",
- "thiserror 2.0.20",
  "tracing",
  "tracing-subscriber",
  "tui-file-explorer",
