@@ -53,8 +53,20 @@ pub fn resolve(
     Ok(requested.to_vec())
 }
 
+/// Map a voiceover folder name to its locale code, as used by the Sophon
+/// manifest/diff `matching_field` values.
+fn folder_to_code(folder: &str) -> Option<&'static str> {
+    match folder {
+        "English(US)" | "English" => Some("en-us"),
+        "Japanese" => Some("ja-jp"),
+        "Korean" => Some("ko-kr"),
+        "Chinese" | "Chinese(PRC)" => Some("zh-cn"),
+        _ => None,
+    }
+}
+
 /// Detect already installed voiceover packages by scanning the game's
-/// `AudioAssets` folder.
+/// `AudioAssets` folder, returning locale codes.
 pub fn detect_installed(game_dir: &Path, edition: Edition) -> Vec<String> {
     let base = game_dir
         .join(edition.data_folder())
@@ -68,6 +80,7 @@ pub fn detect_installed(game_dir: &Path, edition: Edition) -> Vec<String> {
         .filter_map(|entry| entry.ok())
         .filter(|entry| entry.file_type().map(|t| t.is_dir()).unwrap_or(false))
         .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter_map(|name| folder_to_code(&name).map(str::to_owned))
         .collect()
 }
 
@@ -133,5 +146,33 @@ mod tests {
     fn voice_fields_skips_game() {
         let fields = vec!["game", "en-us", "ja-jp"];
         assert_eq!(voice_fields(fields.into_iter()), vec!["en-us", "ja-jp"]);
+    }
+
+    #[test]
+    fn folder_names_map_to_locale_codes() {
+        assert_eq!(folder_to_code("English(US)"), Some("en-us"));
+        assert_eq!(folder_to_code("English"), Some("en-us"));
+        assert_eq!(folder_to_code("Japanese"), Some("ja-jp"));
+        assert_eq!(folder_to_code("Korean"), Some("ko-kr"));
+        assert_eq!(folder_to_code("Chinese"), Some("zh-cn"));
+        assert_eq!(folder_to_code("Chinese(PRC)"), Some("zh-cn"));
+        assert_eq!(folder_to_code("French"), None);
+    }
+
+    #[test]
+    fn detect_installed_returns_locale_codes() {
+        let dir = std::env::temp_dir().join(format!("genshin-dl-test-{}", std::process::id()));
+        let audio = dir
+            .join(Edition::Global.data_folder())
+            .join("StreamingAssets/AudioAssets");
+        std::fs::create_dir_all(audio.join("English(US)")).unwrap();
+        std::fs::create_dir_all(audio.join("Japanese")).unwrap();
+        std::fs::create_dir_all(audio.join("unrelated")).unwrap();
+
+        let mut detected = detect_installed(&dir, Edition::Global);
+        detected.sort();
+        assert_eq!(detected, vec!["en-us", "ja-jp"]);
+
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }
