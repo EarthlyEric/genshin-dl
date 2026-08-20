@@ -233,7 +233,7 @@ impl App {
             KeyCode::Backspace if self.field_focus == 1 => {
                 self.threads.pop();
             }
-            KeyCode::Char(c) if self.field_focus == 1 => {
+            KeyCode::Char(c) if self.field_focus == 1 && c.is_ascii_digit() => {
                 self.threads.push(c);
             }
             _ => {}
@@ -353,7 +353,7 @@ impl App {
     fn start_worker(&mut self) {
         let edition = self.edition;
         let dest = PathBuf::from(self.dest.trim());
-        let threads = self.threads.trim().parse().unwrap_or(8);
+        let threads = parse_threads(&self.threads);
         let voices = voice::parse_arg(Some(self.voice.trim()));
         let action = self.action;
 
@@ -455,6 +455,10 @@ impl App {
             }
         }
     }
+}
+
+fn parse_threads(input: &str) -> usize {
+    input.trim().parse().ok().filter(|t| *t > 0).unwrap_or(8)
 }
 
 fn picker_start_dir(dest: &str) -> PathBuf {
@@ -596,4 +600,25 @@ mod tests {
 
         assert_eq!(app.voice, "none");
     }
+
+    #[test]
+    fn threads_field_rejects_non_digits() {
+        let mut app = params_app();
+        app.field_focus = 1;
+
+        app.on_key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+        assert_eq!(app.threads, "8");
+
+        app.on_key(KeyEvent::new(KeyCode::Char('1'), KeyModifiers::NONE));
+        assert_eq!(app.threads, "81");
+    }
+
+    #[test]
+    fn parse_threads_falls_back_and_rejects_zero() {
+        assert_eq!(parse_threads("12"), 12);
+        assert_eq!(parse_threads("0"), 8);
+        assert_eq!(parse_threads("abc"), 8);
+        assert_eq!(parse_threads(""), 8);
+    }
+
 }

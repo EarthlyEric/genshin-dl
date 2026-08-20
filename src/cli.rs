@@ -28,7 +28,7 @@ pub enum Command {
         /// Game installation directory
         dest: PathBuf,
 
-        #[arg(long, default_value_t = 8, help = "Number of download threads")]
+        #[arg(long, default_value_t = 8, value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..), help = "Number of download threads")]
         threads: usize,
 
         #[arg(long, help = "Temporary download folder; reuse to resume downloads")]
@@ -50,7 +50,7 @@ pub enum Command {
         /// Game installation directory
         dest: PathBuf,
 
-        #[arg(long, default_value_t = 8, help = "Number of download threads")]
+        #[arg(long, default_value_t = 8, value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..), help = "Number of download threads")]
         threads: usize,
 
         #[arg(long, help = "Temporary download folder; reuse to resume downloads")]
@@ -72,7 +72,7 @@ pub enum Command {
         /// Game installation directory (used to detect the current version)
         dest: PathBuf,
 
-        #[arg(long, default_value_t = 8, help = "Number of download threads")]
+        #[arg(long, default_value_t = 8, value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..), help = "Number of download threads")]
         threads: usize,
 
         #[arg(long, help = "Temporary download folder; reuse the same on install")]
@@ -94,7 +94,7 @@ pub enum Command {
         /// Game installation directory
         dest: PathBuf,
 
-        #[arg(long, default_value_t = 8, help = "Number of download threads")]
+        #[arg(long, default_value_t = 8, value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..), help = "Number of download threads")]
         threads: usize,
 
         #[arg(long, help = "Temporary download folder; reuse to resume downloads")]
