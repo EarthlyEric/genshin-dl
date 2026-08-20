@@ -410,7 +410,7 @@ impl App {
             };
 
             let _ = tx.send(Event::Finished(
-                result.as_ref().map(|_| ()).map_err(|e| e.to_string()),
+                result.as_ref().map(|_| ()).map_err(|e| format!("{e:#}")),
             ));
             result
         });
@@ -434,6 +434,20 @@ impl App {
 
         for event in events {
             self.handle_event(event);
+        }
+
+        if self.worker.as_ref().is_some_and(|w| w.is_finished()) && self.rx.is_some() {
+            let worker = self.worker.take().unwrap();
+            self.rx = None;
+            let err_msg = match worker.join() {
+                Ok(Err(err)) => format!("Worker error: {err:#}"),
+                Err(_) => "Worker thread panicked unexpectedly".to_owned(),
+                Ok(Ok(())) => "Worker terminated unexpectedly".to_owned(),
+            };
+            self.result_scroll = 0;
+            self.log(format!("ERROR: {err_msg}"));
+            self.result = Some(Err(err_msg));
+            self.screen = Screen::Result;
         }
 
         let tracing_logs: Vec<String> = self.tracing_rx.try_iter().collect();
@@ -651,4 +665,54 @@ mod tests {
     }
 
 
+
+    #[test]
+    fn worker_dying_without_finished_moves_to_result() {
+        let (tx, rx) = mpsc::channel();
+        let (_, tracing_rx) = mpsc::channel();
+        let mut app = App::new(Edition::Global, tracing_rx);
+        app.screen = Screen::Progress;
+        app.rx = Some(rx);
+        app.worker = Some(std::thread::spawn(move || {
+            drop(tx);
+            Err(anyhow::anyhow!("boom"))
+        }));
+
+        while !app.worker.as_ref().unwrap().is_finished() {
+            std::thread::yield_now();
+        }
+        app.consume_events();
+
+        assert!(matches!(app.screen, Screen::Result));
+        assert_eq!(app.result, Some(Err("Worker error: boom".to_owned())));
+    }
+
+    #[test]
+    fn panicked_worker_moves_to_result() {
+        let prev_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+
+        let (tx, rx) = mpsc::channel();
+        let (_, tracing_rx) = mpsc::channel();
+        let mut app = App::new(Edition::Global, tracing_rx);
+        app.screen = Screen::Progress;
+        app.rx = Some(rx);
+        app.worker = Some(std::thread::spawn(move || {
+            drop(tx);
+            panic!("boom");
+        }));
+
+        while !app.worker.as_ref().unwrap().is_finished() {
+            std::thread::yield_now();
+        }
+        app.consume_events();
+
+        std::panic::set_hook(prev_hook);
+
+        assert!(matches!(app.screen, Screen::Result));
+        assert_eq!(
+            app.result,
+            Some(Err("Worker thread panicked unexpectedly".to_owned()))
+        );
+    }
 }

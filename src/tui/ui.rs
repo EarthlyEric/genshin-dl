@@ -97,7 +97,7 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
                     .add_modifier(Modifier::BOLD),
             ));
             line.push_span(Span::styled(
-                " quit (worker keeps running)",
+                " quit (stops the download)",
                 Style::default().fg(Color::DarkGray),
             ));
             line

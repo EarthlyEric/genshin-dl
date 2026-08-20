@@ -115,7 +115,7 @@ where
     let handle = std::thread::spawn(move || {
         let result = work(tx.clone());
         let _ = tx.send(Event::Finished(
-            result.as_ref().map(|_| ()).map_err(|e| e.to_string()),
+            result.as_ref().map(|_| ()).map_err(|e| format!("{e:#}")),
         ));
         result
     });
@@ -168,9 +168,7 @@ where
                     "{phase} - {}",
                     if result.is_ok() { "ok" } else { "failed" }
                 ));
-                if let Err(err) = result {
-                    anyhow::bail!("{err}");
-                }
+                break;
             }
         }
     }
