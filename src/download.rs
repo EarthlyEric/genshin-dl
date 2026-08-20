@@ -60,6 +60,14 @@ pub fn download(
         .context("no game download manifest found")?
         .clone();
 
+    let available = voice::voice_fields(
+        downloads
+            .manifests
+            .iter()
+            .map(|m| m.matching_field.as_str()),
+    );
+    let fields = voice::resolve(&voices, &available, false)?;
+
     std::fs::create_dir_all(&game_dir).context("failed to create game directory")?;
     let temp = temp.unwrap_or_else(std::env::temp_dir);
 
@@ -72,15 +80,6 @@ pub fn download(
         no_free_space_check,
         &tx,
     )?;
-    write_version(&game_dir, &package.tag)?;
-
-    let available = voice::voice_fields(
-        downloads
-            .manifests
-            .iter()
-            .map(|m| m.matching_field.as_str()),
-    );
-    let fields = voice::resolve(&voices, &available, false)?;
 
     for field in fields {
         let Some(info) = downloads.get_manifests_for(&field) else {
@@ -96,6 +95,8 @@ pub fn download(
             &tx,
         )?;
     }
+
+    write_version(&game_dir, &package.tag)?;
 
     send(&tx, Event::Message("Download complete".into()));
     Ok(())
@@ -173,8 +174,6 @@ pub fn update(
         }
     }
 
-    write_version(&game_dir, &package.tag)?;
-
     update_voices(
         &client,
         &diffs,
@@ -185,8 +184,11 @@ pub fn update(
         threads,
         &voices,
         no_free_space_check,
+        current,
         &tx,
     )?;
+
+    write_version(&game_dir, &package.tag)?;
 
     send(&tx, Event::Message(format!("Updated to {}", latest)));
     Ok(())
@@ -488,11 +490,11 @@ fn update_voices(
     threads: usize,
     voices: &[String],
     no_free_space_check: bool,
+    current: Option<Version>,
     tx: &Sender<Event>,
 ) -> anyhow::Result<()> {
     let installed = voice::detect_installed(game_dir, edition);
     let fields = voice::resolve(voices, &installed, true)?;
-    let current = read_version(game_dir).unwrap_or(None);
     let can_patch = current
         .as_ref()
         .map(|c| package.diff_tags.iter().any(|t| t == &c.to_string()))
