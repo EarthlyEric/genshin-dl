@@ -241,13 +241,15 @@ pub fn pre_download(
         can_patch,
     ) {
         (Some(diff), Some(from), true) => {
-            let mut patcher = SophonPatcher::new(client.clone(), diff, &temp, None)
-                .context("failed to init patcher")?;
-            patcher.check_free_space = !no_free_space_check;
-            send(&tx, Event::Phase("Pre-downloading game update".into()));
-            patcher.pre_download(from, threads, |u| {
-                send_patcher_update(&tx, u, &Arc::new(AtomicBool::new(false)))
-            })?;
+            pre_download_diff(
+                &client,
+                diff,
+                from,
+                &temp,
+                threads,
+                no_free_space_check,
+                &tx,
+            )?;
         }
         _ => {
             if let Some(info) = downloads.get_manifests_for("game") {
@@ -272,13 +274,15 @@ pub fn pre_download(
             can_patch,
         ) {
             (Some(diff), Some(from), true) => {
-                let mut patcher = SophonPatcher::new(client.clone(), diff, &temp, None)
-                    .with_context(|| format!("failed to init patcher for '{field}'"))?;
-                patcher.check_free_space = !no_free_space_check;
-                send(&tx, Event::Phase(format!("Pre-downloading {field}")));
-                patcher.pre_download(from, threads, |u| {
-                    send_patcher_update(&tx, u, &Arc::new(AtomicBool::new(false)))
-                })?;
+                pre_download_diff(
+                    &client,
+                    diff,
+                    from,
+                    &temp,
+                    threads,
+                    no_free_space_check,
+                    &tx,
+                )?;
             }
             _ => {
                 if let Some(info) = downloads.get_manifests_for(&field) {
@@ -474,6 +478,38 @@ fn patch_diff(
 
     if failed.load(Ordering::Acquire) {
         bail!("patching failed for '{}'", diff.matching_field);
+    }
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn pre_download_diff(
+    client: &Client,
+    diff: &SophonDiff,
+    from: Version,
+    temp: &Path,
+    threads: usize,
+    no_free_space_check: bool,
+    tx: &Sender<Event>,
+) -> anyhow::Result<()> {
+    let mut patcher = SophonPatcher::new(client.clone(), diff, temp, None)
+        .with_context(|| format!("failed to init patcher for '{}'", diff.matching_field))?;
+    patcher.check_free_space = !no_free_space_check;
+
+    let failed = Arc::new(AtomicBool::new(false));
+    let failed_clone = Arc::clone(&failed);
+
+    send(
+        tx,
+        Event::Phase(format!("Pre-downloading {}", diff.matching_field)),
+    );
+    patcher.pre_download(from, threads, move |u| {
+        send_patcher_update(tx, u, &failed_clone);
+    })?;
+
+    if failed.load(Ordering::Acquire) {
+        bail!("pre-download failed for '{}'", diff.matching_field);
     }
 
     Ok(())
