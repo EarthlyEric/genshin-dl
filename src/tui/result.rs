@@ -31,8 +31,12 @@ pub(super) fn render_result(frame: &mut Frame, area: Rect, app: &App) {
         }
     }
 
+    let visible = area.height.saturating_sub(2) as usize;
+    let scroll = app.result_scroll.min(lines.len().saturating_sub(visible));
+
     let paragraph = Paragraph::new(lines)
         .block(Block::bordered().title(" Result "))
+        .scroll((scroll as u16, 0))
         .wrap(Wrap { trim: true });
 
     frame.render_widget(paragraph, area);

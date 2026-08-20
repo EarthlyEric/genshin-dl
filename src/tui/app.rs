@@ -124,6 +124,7 @@ pub(super) struct App {
     worker: Option<std::thread::JoinHandle<anyhow::Result<()>>>,
     pub(super) result: Option<Result<(), String>>,
     pub(super) list_output: Vec<String>,
+    pub(super) result_scroll: usize,
     quit: bool,
 }
 
@@ -149,6 +150,7 @@ impl App {
             worker: None,
             result: None,
             list_output: Vec::new(),
+            result_scroll: 0,
             quit: false,
         }
     }
@@ -169,7 +171,12 @@ impl App {
                 _ => {}
             },
             Screen::Result => match key.code {
-                KeyCode::Esc | KeyCode::Enter => self.screen = Screen::Menu,
+                KeyCode::Esc | KeyCode::Enter => {
+                    self.result_scroll = 0;
+                    self.screen = Screen::Menu;
+                }
+                KeyCode::Down => self.result_scroll += 1,
+                KeyCode::Up => self.result_scroll = self.result_scroll.saturating_sub(1),
                 _ => {}
             },
         }
@@ -332,6 +339,7 @@ impl App {
         self.logs.clear();
         self.result = None;
         self.list_output.clear();
+        self.result_scroll = 0;
 
         let mut output = Vec::new();
         let res = cmd::list_text(self.edition, &mut output);
@@ -443,6 +451,7 @@ impl App {
             Event::Error(err) => self.log(format!("ERROR: {err}")),
             Event::Finished(result) => {
                 self.rx = None;
+                self.result_scroll = 0;
                 if let Some(worker) = self.worker.take() {
                     let _ = worker.join();
                 }
@@ -620,5 +629,26 @@ mod tests {
         assert_eq!(parse_threads("abc"), 8);
         assert_eq!(parse_threads(""), 8);
     }
+
+    #[test]
+    fn result_screen_scrolls_and_resets_on_back() {
+        let (_, tracing_rx) = mpsc::channel();
+        let mut app = App::new(Edition::Global, tracing_rx);
+        app.screen = Screen::Result;
+        app.result_scroll = 0;
+
+        app.on_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
+        assert_eq!(app.result_scroll, 1);
+        app.on_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
+        assert_eq!(app.result_scroll, 0);
+        app.on_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
+        assert_eq!(app.result_scroll, 0);
+
+        app.on_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
+        app.on_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        assert!(matches!(app.screen, Screen::Menu));
+        assert_eq!(app.result_scroll, 0);
+    }
+
 
 }

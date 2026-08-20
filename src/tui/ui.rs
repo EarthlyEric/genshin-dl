@@ -102,7 +102,7 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
             ));
             line
         }
-        Screen::Result => hint_line(&[("Enter/Esc", "back to menu")]),
+        Screen::Result => hint_line(&[("↑/↓", "scroll"), ("Enter/Esc", "back to menu")]),
     };
 
     let footer = Paragraph::new(line).block(
